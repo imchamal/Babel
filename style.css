@@ -30,3 +30,14 @@
     align-items: center;
     gap: 6px;
 }
+
+.tavago_translate_message {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tavago_translate_message.tavago-busy {
+    opacity: 0.6;
+    pointer-events: none;
+}

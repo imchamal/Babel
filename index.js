@@ -3,6 +3,8 @@ import { saveSettingsDebounced } from "../../../../script.js";
 
 const extensionName = "Tavago";
 const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
+const messageButtonClass = "tavago_translate_message";
+const tavagoIconClass = "fa-solid fa-wand-magic-sparkles";
 
 const defaultSettings = {
     targetLanguage: "Korean",
@@ -42,6 +44,13 @@ function showError(message) {
 
 function getInputTextarea() {
     return document.querySelector("#send_textarea");
+}
+
+function getMessageIdFromBlock(messageBlock) {
+    const messageId = messageBlock?.getAttribute("mesid");
+    const parsedId = Number(messageId);
+
+    return Number.isInteger(parsedId) ? parsedId : null;
 }
 
 async function translateText(text) {
@@ -93,6 +102,97 @@ async function translateInputTextarea() {
     }
 }
 
+async function translateChatMessage(messageBlock, button) {
+    const context = getContext();
+    const messageId = getMessageIdFromBlock(messageBlock);
+    const message = messageId === null ? null : context.chat?.[messageId];
+
+    if (!message || !message.mes) {
+        showError("번역할 메시지를 찾지 못했습니다.");
+        return;
+    }
+
+    button.prop("disabled", true);
+    button.addClass("tavago-busy");
+
+    try {
+        const translatedText = await translateText(message.mes);
+        message.extra = message.extra || {};
+        message.extra.display_text = translatedText.trim();
+
+        if (typeof context.updateMessageBlock === "function") {
+            context.updateMessageBlock(messageId, message);
+        }
+
+        if (typeof context.saveChat === "function") {
+            await context.saveChat();
+        }
+
+        showInfo("메시지 번역이 완료되었습니다.");
+    } catch (error) {
+        console.error(error);
+        showError(error.message || "메시지 번역 중 오류가 발생했습니다.");
+    } finally {
+        button.prop("disabled", false);
+        button.removeClass("tavago-busy");
+        addTranslateButtonsToMessages();
+    }
+}
+
+function findMessageButtonContainer(messageBlock) {
+    return (
+        messageBlock.querySelector(".extraMesButtons") ||
+        messageBlock.querySelector(".mes_buttons") ||
+        messageBlock
+    );
+}
+
+function addTranslateButtonToMessage(messageBlock) {
+    if (!(messageBlock instanceof HTMLElement)) {
+        return;
+    }
+
+    if (messageBlock.querySelector(`.${messageButtonClass}`)) {
+        return;
+    }
+
+    const messageId = getMessageIdFromBlock(messageBlock);
+
+    if (messageId === null) {
+        return;
+    }
+
+    const button = $(`
+        <button class="${messageButtonClass} menu_button" title="Tavago로 이 메시지 번역">
+            <i class="${tavagoIconClass}"></i>
+        </button>
+    `);
+
+    button.on("click", async function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        await translateChatMessage(messageBlock, button);
+    });
+
+    findMessageButtonContainer(messageBlock).append(button[0]);
+}
+
+function addTranslateButtonsToMessages() {
+    document.querySelectorAll("#chat .mes").forEach(addTranslateButtonToMessage);
+}
+
+function watchChatMessages() {
+    const chat = document.querySelector("#chat");
+
+    if (!chat) {
+        return;
+    }
+
+    const observer = new MutationObserver(addTranslateButtonsToMessages);
+    observer.observe(chat, { childList: true, subtree: true });
+    addTranslateButtonsToMessages();
+}
+
 function loadSettingsToUi() {
     const settings = getSettings();
     $("#tavago_target_language").val(settings.targetLanguage);
@@ -121,4 +221,5 @@ jQuery(async () => {
 
     loadSettingsToUi();
     bindSettingsEvents();
+    watchChatMessages();
 });

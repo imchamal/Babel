@@ -5,8 +5,10 @@ Tavago is a minimal SillyTavern translation extension test.
 ## Current test feature
 
 - Adds a Tavago settings panel.
+- Uses a Font Awesome icon instead of a PNG icon file.
 - Uses the current SillyTavern API connection through `generateRaw()`.
 - Translates the current input box text and replaces the input box content.
+- Adds a Tavago translate button to chat messages.
 
 ## Install for testing
 
