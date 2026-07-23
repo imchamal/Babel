@@ -67,7 +67,7 @@
                     </select>
                 </div>
 
-                <div class="tavago-field tavago-field-span">
+                <div class="tavago-field">
                     <!-- 입력창 원문을 수정했을 때 기존 번역 상태를 어떻게 처리할지 정합니다. -->
                     <label class="tavago-label" for="tavago_input_edit_mode">
                         입력 수정 후
@@ -75,6 +75,18 @@
                     <select id="tavago_input_edit_mode" class="text_pole">
                         <option value="manual">수동 번역</option>
                         <option value="auto">자동 재번역</option>
+                    </select>
+                </div>
+
+                <div class="tavago-field">
+                    <!-- 번역 결과의 문체를 정합니다. 공통 번역 규칙은 그대로 유지됩니다. -->
+                    <label class="tavago-label" for="tavago_translation_style">
+                        문체
+                    </label>
+                    <select id="tavago_translation_style" class="text_pole">
+                        <option value="normal">일반</option>
+                        <option value="novel">소설</option>
+                        <option value="natural">번역체 탈피</option>
                     </select>
                 </div>
             </div>
@@ -89,7 +101,7 @@
 
             <!-- 메시지 옆 Tavago 아이콘 사용법입니다. -->
             <small class="tavago-help">
-                전송 버튼 옆 아이콘: 입력창 번역/전환. 메시지 아이콘: 번역/전환. 길게 누르기: 재번역.
+                전송 버튼 옆 아이콘은 입력창을 번역하거나 전환합니다. 메시지 아이콘은 메시지를 번역하거나 전환합니다. 길게 누르면 재번역합니다.
             </small>
         </div>
     </div>

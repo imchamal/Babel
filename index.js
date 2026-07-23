@@ -33,6 +33,7 @@ const defaultSettings = {
     dualLineMode: false,
     connectionProfile: "",
     inputEditMode: "manual",
+    translationStyle: "normal",
     customPrompt: "",
     systemPrompt: [
         "You are Tavago, a precise translation engine for SillyTavern chats.",
@@ -47,6 +48,39 @@ const defaultSettings = {
         "Do not censor, soften, or embellish the original text.",
     ].join("\n"),
 };
+
+// 번역 스타일별 추가 지시문입니다.
+// 공통 번역 규칙을 대체하지 않고, 사용자가 고른 문체만 살짝 덧붙입니다.
+const translationStylePrompts = {
+    normal: [
+        "Translation style:",
+        "Use a balanced, natural translation style.",
+        "Keep the original tone and nuance without making the wording overly formal or overly casual.",
+    ].join("\n"),
+    novel: [
+        "Translation style:",
+        "Use a polished Korean web novel style.",
+        "Make narration, dialogue, rhythm, and emotional nuance read smoothly while preserving the original meaning.",
+        "Do not add new details, metaphors, or characterization that are not in the original.",
+    ].join("\n"),
+    natural: [
+        "Translation style:",
+        "Avoid translationese and make the result read like naturally written Korean.",
+        "Rewrite awkward English-like word order, repeated phrasing, and stiff expressions into fluent Korean.",
+        "Do not omit, add, summarize, or reinterpret the original meaning.",
+    ].join("\n"),
+};
+
+// 저장된 문체 값이 오래되었거나 잘못된 값이면 기본값으로 되돌립니다.
+function normalizeTranslationStyle(value) {
+    const style = String(value || "normal");
+
+    if (translationStylePrompts[style]) {
+        return style;
+    }
+
+    return "normal";
+}
 
 // SillyTavern에 저장된 Tavago 설정을 읽습니다.
 // 빠진 값이 있으면 위의 기본 설정으로 채워줍니다.
@@ -443,15 +477,15 @@ function updateMessageButtonState(message, button) {
     button.toggleClass(errorButtonClass, hasError);
 
     if (hasError) {
-        button.attr("title", `최근 번역 실패: ${tavagoData.last_error || "오류 정보 없음"}. 길게 누르면 재번역`);
+        button.attr("title", `번역 실패 · 길게 재번역 · ${tavagoData.last_error || "오류 정보 없음"}`);
     } else if (!tavagoData.translated_text) {
-        button.attr("title", "Tavago로 이 메시지 번역");
+        button.attr("title", "번역");
     } else if (isOutdated) {
-        button.attr("title", "현재 메시지 번역 설정과 다른 번역입니다. 길게 누르면 재번역");
+        button.attr("title", "설정 다름 · 길게 재번역");
     } else if (isShowingTranslation) {
-        button.attr("title", "원문 보기. 길게 누르면 재번역");
+        button.attr("title", "원문 전환 · 길게 재번역");
     } else {
-        button.attr("title", "번역문 보기. 길게 누르면 재번역");
+        button.attr("title", "번역문 전환 · 길게 재번역");
     }
 }
 
@@ -471,7 +505,7 @@ function addInputTranslateButtonToSendControls() {
     const button = document.createElement("div");
     button.id = "tavago_translate_input";
     button.className = `${inputIconClass} interactable`;
-    button.title = "짧게: 번역/전환 · 길게: 재번역";
+    button.title = "입력 번역/전환 · 길게 재번역";
     button.tabIndex = 0;
     button.setAttribute("role", "button");
 
@@ -567,31 +601,60 @@ function finishMessageTranslation(message, button) {
 function buildTranslationPrompt(targetLanguageCode, translationType = "message") {
     const settings = getSettings();
     const targetLanguage = getLanguageName(targetLanguageCode);
+    const translationStyle = normalizeTranslationStyle(settings.translationStyle);
     const promptParts = [
         defaultSettings.systemPrompt.replaceAll("{{language}}", targetLanguage),
     ];
 
-    if (translationType === "message" && settings.dualLineMode) {
+    if (translationType === "message") {
+        // 인포블럭은 사용자마다 문법이 달라서 특정 형식을 가정하지 않습니다.
+        // 대신 CSS/정규식이 잡아낼 수 있는 바깥 구조는 보존하고, 사람이 읽는 내용만 번역하게 합니다.
         promptParts.push([
             "",
-            "Dual-line display rule:",
-            "Apply original [translation] ONLY to text segments already wrapped in one of these delimiters: double quotes, single quotes, curly quotes, asterisks, double asterisks, or backticks.",
-            "Do NOT apply original [translation] to plain narration.",
-            "Plain narration must be translated normally, with no original text and no square brackets.",
-            "Never wrap the original segment in square brackets.",
-            "Never output [original][translation].",
-            "For eligible wrapped segments, the correct format is always: original [translation].",
-            "If the original segment is wrapped in quotes or markdown delimiters, put [translation] INSIDE the same wrapper so the UI styles the original and translation together.",
-            "Examples:",
+            "Structured info block preservation:",
+            "Some messages may contain custom info blocks, stat blocks, templates, or regex/CSS-driven markup.",
+            "Preserve their outer structure exactly: line order, line breaks, indentation, labels, keys, tags, brackets, braces, pipes, separators, markdown markers, and trigger words.",
+            "Translate only human-readable prose or values inside those structures.",
+            "Do not rename structural keys, remove delimiters, merge lines, split blocks, or convert the block into a different format.",
+            "If unsure whether text is a structural marker or readable content, preserve it.",
+        ].join("\n"));
+    }
+
+    if (translationType === "message" && settings.dualLineMode) {
+        // 대사 병기는 따옴표 대사와 백틱 문자/메모 표현에만 적용합니다.
+        // 나레이션에 병기가 붙으면 읽기 흐름이 깨지므로 강하게 금지합니다.
+        promptParts.push([
+            "",
+            "Quoted/backtick parallel display rule:",
+            "Use original [translation] ONLY for text segments already wrapped in straight double quotes \"...\" or backticks `...`.",
+            "Do NOT use original [translation] for narration, actions, descriptions, thoughts, asterisks, double asterisks, single quotes, curly quotes, or plain text.",
+            "Narration and all non-eligible text must be translated normally, without original text and without square brackets.",
+            "Return one translated message only.",
+            "Do not output the original message first and then a full translated copy.",
+            "Do not duplicate paragraphs, sentences, or blocks.",
+            "Only eligible double-quoted or backticked segments may keep original text.",
+            "Never wrap the original segment itself in square brackets.",
+            "Never output [original][translation] or original paragraph followed by translated paragraph.",
+            "For eligible segments, the correct format is always: original [translation].",
+            "For double-quoted segments, put [translation] before the closing double quote so the quote UI styles the original and translation together.",
+            "For backticked segments, put [translation] before the closing backtick.",
+            "Correct examples:",
             "\"I don't know.\" -> \"I don't know. [모르겠어.]\"",
-            "'I should leave.' -> 'I should leave. [떠나야 해.]'",
-            "*I should leave.* -> *I should leave. [떠나야 해.]*",
-            "**Incoming message** -> **Incoming message [수신 메시지]**",
             "`text message` -> `text message [문자 메시지]`",
             "She sat down. -> 그녀는 자리에 앉았다.",
             "She sat down. \"I'm tired.\" -> 그녀는 자리에 앉았다. \"I'm tired. [피곤해.]\"",
-            "Incorrect: She sat down. [그녀는 자리에 앉았다.]",
-            "Do not make the bracketed translation bold unless the original segment itself is already bold.",
+            "Incorrect examples:",
+            "She sat down. [그녀는 자리에 앉았다.]",
+            "\"Hermione Granger, [헤르미온 그레인저,]\" she said. 그녀가 말했다.",
+            "Original paragraph followed by translated paragraph.",
+        ].join("\n"));
+    }
+
+    if (translationStylePrompts[translationStyle]) {
+        // 번역 스타일은 공통 규칙 뒤에 붙여서, 보존 규칙과 대사 병기 규칙을 덮어쓰지 않게 합니다.
+        promptParts.push([
+            "",
+            translationStylePrompts[translationStyle],
         ].join("\n"));
     }
 
@@ -654,7 +717,7 @@ async function translateInputTextarea(forceRetranslate = false) {
     if (state && !forceRetranslate) {
         setInputTextareaValue(textarea, state.translatedText);
         state.showingTranslation = true;
-        showInfo("번역문으로 전환");
+        showInfo("번역문으로 전환했습니다.");
         return;
     }
 
@@ -672,7 +735,7 @@ async function translateInputTextarea(forceRetranslate = false) {
     const button = $("#tavago_translate_input");
     button.prop("disabled", true);
     button.addClass("tavago-busy");
-    showInfo(forceRetranslate ? "재번역 시작" : "번역 시작");
+    showInfo(forceRetranslate ? "재번역을 진행 중입니다." : "번역을 진행 중입니다.");
 
     try {
         const sourceText = state ? state.originalText : originalText;
@@ -690,7 +753,7 @@ async function translateInputTextarea(forceRetranslate = false) {
         };
 
         setInputTextareaValue(textarea, translatedText);
-        showInfo(forceRetranslate ? "재번역 완료" : "번역 완료");
+        showInfo(forceRetranslate ? "재번역이 완료되었습니다." : "번역이 완료되었습니다.");
     } catch (error) {
         console.error(error);
         showError(error.message || "번역 중 오류가 발생했습니다.");
@@ -719,11 +782,11 @@ async function toggleInputTextareaTranslation() {
     if (state.showingTranslation) {
         setInputTextareaValue(textarea, state.originalText);
         state.showingTranslation = false;
-        showInfo("원문으로 전환");
+        showInfo("원문으로 전환했습니다.");
     } else {
         setInputTextareaValue(textarea, state.translatedText);
         state.showingTranslation = true;
-        showInfo("번역문으로 전환");
+        showInfo("번역문으로 전환했습니다.");
     }
 }
 
@@ -971,7 +1034,7 @@ function addTranslateButtonToMessage(messageBlock) {
     }
 
     const button = $(`
-        <div class="${messageButtonClass} mes_button" title="Tavago로 이 메시지 번역">
+        <div class="${messageButtonClass} mes_button" title="번역">
             <span class="tavago-message-icon"></span>
         </div>
     `);
@@ -1094,6 +1157,7 @@ function loadSettingsToUi() {
     $("#tavago_auto_translate_mode").val(settings.autoTranslateMode);
     $("#tavago_dual_line_mode").val(settings.dualLineMode ? "on" : "off");
     $("#tavago_input_edit_mode").val(settings.inputEditMode);
+    $("#tavago_translation_style").val(normalizeTranslationStyle(settings.translationStyle));
     $("#tavago_custom_prompt").val(settings.customPrompt);
 }
 
@@ -1129,6 +1193,11 @@ function bindSettingsEvents() {
 
     $("#tavago_input_edit_mode").on("change", function () {
         getSettings().inputEditMode = String($(this).val() || "manual");
+        saveSettingsDebounced();
+    });
+
+    $("#tavago_translation_style").on("change", function () {
+        getSettings().translationStyle = normalizeTranslationStyle($(this).val());
         saveSettingsDebounced();
     });
 
