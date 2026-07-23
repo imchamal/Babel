@@ -427,9 +427,17 @@ function buildTranslationPrompt(targetLanguageCode, translationType = "message")
         promptParts.push([
             "",
             "Dual-line display rule:",
-            "For quoted speech, thoughts, emphasized text, inline code-like messages, letters, or text messages, preserve the original segment and append the translation immediately after it in square brackets.",
-            "Use this format exactly: original [translation].",
-            "Do not make the bracketed translation bold.",
+            "For dialogue, thoughts, emphasized text, inline code-like messages, letters, or text messages, preserve the original segment and add the translation as [translation].",
+            "Never wrap the original segment in square brackets.",
+            "Never output [original][translation].",
+            "The correct format is always: original [translation].",
+            "If the original segment is wrapped in quotes or markdown delimiters, put [translation] INSIDE the same wrapper so the UI styles the original and translation together.",
+            "Examples:",
+            "\"I don't know.\" -> \"I don't know. [모르겠어.]\"",
+            "*I should leave.* -> *I should leave. [떠나야 해.]*",
+            "**Incoming message** -> **Incoming message [수신 메시지]**",
+            "`text message` -> `text message [문자 메시지]`",
+            "Do not make the bracketed translation bold unless the original segment itself is already bold.",
         ].join("\n"));
     }
 
