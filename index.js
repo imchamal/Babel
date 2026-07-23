@@ -886,11 +886,13 @@ async function translateText(text, targetLanguageCode, translationType = "messag
         throw new Error("현재 SillyTavern에서 generateRaw()를 찾을 수 없습니다.");
     }
 
-    const translatedText = await enqueueTranslationTask(() => (
-        selectedProfileId
-            ? sendTranslationWithConnectionProfile(selectedProfileId, promptInfo, promptText)
-            : context.generateRaw(buildGenerateRawOptions(promptInfo, promptText))
-    )));
+    const translatedText = await enqueueTranslationTask(() => {
+        if (selectedProfileId) {
+            return sendTranslationWithConnectionProfile(selectedProfileId, promptInfo, promptText);
+        }
+
+        return context.generateRaw(buildGenerateRawOptions(promptInfo, promptText));
+    });
 
     return {
         text: translatedText,
