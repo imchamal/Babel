@@ -1,10 +1,10 @@
-# Tavago
+# Pavago
 
-Tavago is a minimal SillyTavern translation extension test.
+Pavago is a minimal SillyTavern translation extension test.
 
 ## Current test feature
 
-- Adds a Tavago settings panel.
+- Adds a Pavago settings panel.
 - Uses a Font Awesome icon instead of a PNG icon file.
 - Uses the current SillyTavern API connection through `generateRaw()`.
 - Adds an input translation icon next to the SillyTavern send button.
@@ -12,7 +12,7 @@ Tavago is a minimal SillyTavern translation extension test.
 - Long press on the input icon retranslates the input text.
 - Supports Korean/English bidirectional input translation.
 - Uses a single target language for message reading.
-- Adds a Tavago translate button to chat messages.
+- Adds a Pavago translate button to chat messages.
 - Short press on a message button toggles original/translation.
 - Long press on a message button retranslates the message.
 - Auto-translates new messages by selected target: off, both, user only, or AI only.
@@ -27,7 +27,7 @@ Tavago is a minimal SillyTavern translation extension test.
 Place this folder here:
 
 ```text
-SillyTavern/public/scripts/extensions/third-party/Tavago
+SillyTavern/public/scripts/extensions/third-party/Pavago
 ```
 
 Then restart SillyTavern or reload the browser page.

@@ -2,17 +2,17 @@ import { extension_settings, getContext } from "../../../extensions.js";
 import { executeSlashCommands } from "../../../slash-commands.js";
 import { saveSettingsDebounced } from "../../../../script.js";
 
-// Tavago 확장프로그램의 이름과 폴더 경로입니다.
-// 실제 폴더 이름도 아래 위치의 Tavago와 같아야 합니다.
-// public/scripts/extensions/third-party/Tavago
-const extensionName = "Tavago";
+// Pavago 확장프로그램의 이름과 폴더 경로입니다.
+// 실제 폴더 이름도 아래 위치의 Pavago와 같아야 합니다.
+// public/scripts/extensions/third-party/Pavago
+const extensionName = "Pavago";
 const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
 
-// Tavago가 직접 만든 메시지 번역 버튼에 붙일 CSS 클래스 이름입니다.
-const messageButtonClass = "tavago_translate_message";
-const activeButtonClass = "tavago-active";
-const outdatedButtonClass = "tavago-outdated";
-const errorButtonClass = "tavago-error";
+// Pavago가 직접 만든 메시지 번역 버튼에 붙일 CSS 클래스 이름입니다.
+const messageButtonClass = "pavago_translate_message";
+const activeButtonClass = "pavago-active";
+const outdatedButtonClass = "pavago-outdated";
+const errorButtonClass = "pavago-error";
 const inputIconClass = "fa-solid fa-feather-pointed";
 const longPressMs = 650;
 const autoTranslateDelayMs = 1500;
@@ -39,7 +39,7 @@ const defaultSettings = {
     contextMessageCount: 0,
     customPrompt: "",
     systemPrompt: [
-        "You are Tavago, a precise translation engine for SillyTavern chats.",
+        "You are Pavago, a precise translation engine for SillyTavern chats.",
         "Translate the user's text into {{language}}.",
         "",
         "Rules:",
@@ -125,7 +125,7 @@ function getGenerationSettingsKey(includeContext = true) {
 }
 
 // SillyTavern generateRaw()에 넘길 생성 옵션입니다.
-// 버전에 따라 일부 키를 무시할 수 있으므로, Tavago 쪽에서는 같은 값을 저장해 상태 비교에 사용합니다.
+// 버전에 따라 일부 키를 무시할 수 있으므로, Pavago 쪽에서는 같은 값을 저장해 상태 비교에 사용합니다.
 function buildGenerateRawOptions(promptInfo, promptText) {
     const options = getGenerationOptions();
 
@@ -138,7 +138,7 @@ function buildGenerateRawOptions(promptInfo, promptText) {
     };
 }
 
-// SillyTavern에 저장된 Tavago 설정을 읽습니다.
+// SillyTavern에 저장된 Pavago 설정을 읽습니다.
 // 빠진 값이 있으면 위의 기본 설정으로 채워줍니다.
 function getSettings() {
     const savedSettings = extension_settings[extensionName] || {};
@@ -233,7 +233,7 @@ function getSlashCommandPipe(result) {
     return result?.pipe === undefined || result?.pipe === null ? "" : String(result.pipe);
 }
 
-// SillyTavern은 프로필 없음 상태를 <None>으로 표현할 수 있으므로 Tavago 내부에서는 빈 문자열로 통일합니다.
+// SillyTavern은 프로필 없음 상태를 <None>으로 표현할 수 있으므로 Pavago 내부에서는 빈 문자열로 통일합니다.
 function normalizeConnectionProfileName(profileName) {
     const normalized = String(profileName || "").trim();
 
@@ -257,7 +257,7 @@ async function switchConnectionProfile(profileName) {
     }
 }
 
-// Tavago에서 선택한 연결 프로필을 적용한 상태로 작업을 실행합니다.
+// Pavago에서 선택한 연결 프로필을 적용한 상태로 작업을 실행합니다.
 // /profile은 SillyTavern 전체 연결 설정을 바꾸므로, 작업 후 이전 프로필로 되돌립니다.
 async function runWithSelectedConnectionProfile(task) {
     const selectedProfile = normalizeConnectionProfileName(getSettings().connectionProfile);
@@ -393,15 +393,15 @@ function handleUserInputTextareaEdit() {
 }
 
 // 입력창 변경 이벤트를 감시합니다.
-// Tavago가 값을 바꾼 경우는 제외하고, 사용자가 직접 수정한 경우만 처리합니다.
+// Pavago가 값을 바꾼 경우는 제외하고, 사용자가 직접 수정한 경우만 처리합니다.
 function watchInputTextareaChanges() {
     const textarea = getInputTextarea();
 
-    if (!(textarea instanceof HTMLTextAreaElement) || textarea.dataset.tavagoInputWatcher === "true") {
+    if (!(textarea instanceof HTMLTextAreaElement) || textarea.dataset.pavagoInputWatcher === "true") {
         return;
     }
 
-    textarea.dataset.tavagoInputWatcher = "true";
+    textarea.dataset.pavagoInputWatcher = "true";
     textarea.addEventListener("input", handleUserInputTextareaEdit);
 }
 
@@ -465,23 +465,23 @@ function buildPromptWithContext(targetText, contextText) {
     ].join("\n");
 }
 
-// 메시지 안에 Tavago 전용 저장 공간을 준비합니다.
+// 메시지 안에 Pavago 전용 저장 공간을 준비합니다.
 // 이전 테스트 버전에서 display_text에만 저장한 번역문도 여기로 옮겨 둡니다.
-function getTavagoData(message) {
+function getPavagoData(message) {
     message.extra = message.extra || {};
-    message.extra.tavago = message.extra.tavago || {};
+    message.extra.pavago = message.extra.pavago || {};
 
-    if (message.extra.display_text && !message.extra.tavago.translated_text) {
-        message.extra.tavago.translated_text = message.extra.display_text;
-        message.extra.tavago.showing_translation = true;
+    if (message.extra.display_text && !message.extra.pavago.translated_text) {
+        message.extra.pavago.translated_text = message.extra.display_text;
+        message.extra.pavago.showing_translation = true;
     }
 
-    return message.extra.tavago;
+    return message.extra.pavago;
 }
 
-// 버튼 상태 확인처럼 읽기만 필요한 곳에서는 빈 Tavago 데이터를 새로 만들지 않습니다.
-function getExistingTavagoData(message) {
-    return message?.extra?.tavago || {};
+// 버튼 상태 확인처럼 읽기만 필요한 곳에서는 빈 Pavago 데이터를 새로 만들지 않습니다.
+function getExistingPavagoData(message) {
+    return message?.extra?.pavago || {};
 }
 
 // 자동 번역 설정값에 따라 이 메시지를 자동 번역할지 판단합니다.
@@ -512,56 +512,56 @@ function shouldAutoTranslateMessage(message) {
     return false;
 }
 
-// 이 메시지에 Tavago 번역문이 이미 저장되어 있는지 확인합니다.
+// 이 메시지에 Pavago 번역문이 이미 저장되어 있는지 확인합니다.
 function hasSavedTranslation(message) {
-    const tavagoData = getTavagoData(message);
+    const pavagoData = getPavagoData(message);
 
-    return Boolean(tavagoData.translated_text);
+    return Boolean(pavagoData.translated_text);
 }
 
 // 저장된 번역문이 현재 메시지 번역 설정과 다른지 확인합니다.
 // 목표 언어나 번역 지시문이 바뀌었으면 true가 됩니다.
 function isTranslationOutdated(message) {
-    const tavagoData = getExistingTavagoData(message);
+    const pavagoData = getExistingPavagoData(message);
 
-    if (!tavagoData.translated_text) {
+    if (!pavagoData.translated_text) {
         return false;
     }
 
     const promptInfo = buildTranslationPrompt(getMessageTargetLanguageCode(), "message");
 
     return (
-        tavagoData.target_language !== promptInfo.targetLanguage ||
-        tavagoData.prompt_used !== promptInfo.systemPrompt ||
-        tavagoData.generation_settings !== getGenerationSettingsKey() ||
-        normalizeConnectionProfileName(tavagoData.connection_profile) !== normalizeConnectionProfileName(getSettings().connectionProfile)
+        pavagoData.target_language !== promptInfo.targetLanguage ||
+        pavagoData.prompt_used !== promptInfo.systemPrompt ||
+        pavagoData.generation_settings !== getGenerationSettingsKey() ||
+        normalizeConnectionProfileName(pavagoData.connection_profile) !== normalizeConnectionProfileName(getSettings().connectionProfile)
     );
 }
 
-// 메시지 하나에서 Tavago가 저장한 번역 캐시만 삭제합니다.
+// 메시지 하나에서 Pavago가 저장한 번역 캐시만 삭제합니다.
 // 원문 message.mes와 다른 확장 설정은 건드리지 않습니다.
-function clearTavagoDataFromMessage(message) {
+function clearPavagoDataFromMessage(message) {
     if (!message?.extra) {
         return false;
     }
 
-    const hadTavagoData = Boolean(message.extra.tavago);
+    const hadPavagoData = Boolean(message.extra.pavago);
     const hadDisplayText = Boolean(message.extra.display_text);
 
-    if (hadTavagoData) {
-        delete message.extra.tavago;
+    if (hadPavagoData) {
+        delete message.extra.pavago;
     }
 
-    // Tavago 번역문이 화면에 표시 중이면 원문으로 돌아가야 하므로 display_text도 지웁니다.
-    // Tavago 데이터가 없는 메시지는 다른 기능의 display_text일 수 있어 건드리지 않습니다.
-    if (hadTavagoData && hadDisplayText) {
+    // Pavago 번역문이 화면에 표시 중이면 원문으로 돌아가야 하므로 display_text도 지웁니다.
+    // Pavago 데이터가 없는 메시지는 다른 기능의 display_text일 수 있어 건드리지 않습니다.
+    if (hadPavagoData && hadDisplayText) {
         delete message.extra.display_text;
     }
 
-    return hadTavagoData;
+    return hadPavagoData;
 }
 
-// 현재 채팅 전체에서 Tavago 번역 캐시를 삭제하고 화면과 저장 파일을 갱신합니다.
+// 현재 채팅 전체에서 Pavago 번역 캐시를 삭제하고 화면과 저장 파일을 갱신합니다.
 async function clearCurrentChatTranslations() {
     const context = getContext();
 
@@ -570,7 +570,7 @@ async function clearCurrentChatTranslations() {
         return;
     }
 
-    const confirmed = window.confirm("현재 채팅의 Tavago 번역을 모두 삭제할까요?");
+    const confirmed = window.confirm("현재 채팅의 Pavago 번역을 모두 삭제할까요?");
 
     if (!confirmed) {
         return;
@@ -579,7 +579,7 @@ async function clearCurrentChatTranslations() {
     let clearedCount = 0;
 
     context.chat.forEach((message, messageId) => {
-        if (!clearTavagoDataFromMessage(message)) {
+        if (!clearPavagoDataFromMessage(message)) {
             return;
         }
 
@@ -591,7 +591,7 @@ async function clearCurrentChatTranslations() {
     });
 
     if (!clearedCount) {
-        showInfo("삭제할 Tavago 번역이 없습니다.");
+        showInfo("삭제할 Pavago 번역이 없습니다.");
         return;
     }
 
@@ -601,43 +601,43 @@ async function clearCurrentChatTranslations() {
 
     inputTranslationState = null;
     addTranslateButtonsToMessages();
-    showInfo(`Tavago 번역 ${clearedCount}개를 초기화했습니다.`);
+    showInfo(`Pavago 번역 ${clearedCount}개를 초기화했습니다.`);
 }
 
-// 번역 실패 정보를 메시지의 Tavago 저장 공간에 남깁니다.
+// 번역 실패 정보를 메시지의 Pavago 저장 공간에 남깁니다.
 function markTranslationFailed(message, error) {
-    const tavagoData = getTavagoData(message);
+    const pavagoData = getPavagoData(message);
     const errorMessage = error?.message || String(error) || "번역 중 오류가 발생했습니다.";
 
-    tavagoData.auto_translate_failed = true;
-    tavagoData.last_error = errorMessage;
-    tavagoData.last_error_at = Date.now();
+    pavagoData.auto_translate_failed = true;
+    pavagoData.last_error = errorMessage;
+    pavagoData.last_error_at = Date.now();
 }
 
 // 번역이 성공하면 이전 실패 정보를 지웁니다.
 function clearTranslationFailed(message) {
-    const tavagoData = getTavagoData(message);
+    const pavagoData = getPavagoData(message);
 
-    tavagoData.auto_translate_failed = false;
-    delete tavagoData.last_error;
-    delete tavagoData.last_error_at;
+    pavagoData.auto_translate_failed = false;
+    delete pavagoData.last_error;
+    delete pavagoData.last_error_at;
 }
 
 // 저장된 번역문을 화면에 보여줍니다.
 function showTranslation(message) {
-    const tavagoData = getTavagoData(message);
+    const pavagoData = getPavagoData(message);
 
-    message.extra.display_text = tavagoData.translated_text;
-    tavagoData.showing_translation = true;
+    message.extra.display_text = pavagoData.translated_text;
+    pavagoData.showing_translation = true;
 }
 
 // 원문을 화면에 보여줍니다.
 // display_text를 지우면 SillyTavern이 원래 message.mes를 보여줍니다.
 function showOriginal(message) {
-    const tavagoData = getTavagoData(message);
+    const pavagoData = getPavagoData(message);
 
     delete message.extra.display_text;
-    tavagoData.showing_translation = false;
+    pavagoData.showing_translation = false;
 }
 
 // 메시지 화면을 다시 그리고 채팅을 저장합니다.
@@ -653,18 +653,18 @@ async function refreshMessageAndSave(context, messageId, message) {
 
 // 버튼의 툴팁과 활성 표시를 현재 메시지 상태에 맞게 바꿉니다.
 function updateMessageButtonState(message, button) {
-    const tavagoData = getExistingTavagoData(message);
-    const isShowingTranslation = Boolean(tavagoData.showing_translation);
+    const pavagoData = getExistingPavagoData(message);
+    const isShowingTranslation = Boolean(pavagoData.showing_translation);
     const isOutdated = isTranslationOutdated(message);
-    const hasError = Boolean(tavagoData.auto_translate_failed);
+    const hasError = Boolean(pavagoData.auto_translate_failed);
 
     button.toggleClass(activeButtonClass, isShowingTranslation);
     button.toggleClass(outdatedButtonClass, isOutdated);
     button.toggleClass(errorButtonClass, hasError);
 
     if (hasError) {
-        button.attr("title", `번역 실패 · 길게 재번역 · ${tavagoData.last_error || "오류 정보 없음"}`);
-    } else if (!tavagoData.translated_text) {
+        button.attr("title", `번역 실패 · 길게 재번역 · ${pavagoData.last_error || "오류 정보 없음"}`);
+    } else if (!pavagoData.translated_text) {
         button.attr("title", "번역");
     } else if (isOutdated) {
         button.attr("title", "설정 다름 · 길게 재번역");
@@ -678,7 +678,7 @@ function updateMessageButtonState(message, button) {
 // 실리태번 전송 버튼 근처에 입력창 번역 버튼을 붙입니다.
 // 설정창에 있던 버튼과 같은 id를 쓰므로 기존 translateInputTextarea()가 그대로 작동합니다.
 function addInputTranslateButtonToSendControls() {
-    if (document.querySelector("#tavago_translate_input")) {
+    if (document.querySelector("#pavago_translate_input")) {
         return;
     }
 
@@ -689,7 +689,7 @@ function addInputTranslateButtonToSendControls() {
     }
 
     const button = document.createElement("div");
-    button.id = "tavago_translate_input";
+    button.id = "pavago_translate_input";
     button.className = `${inputIconClass} interactable`;
     button.title = "입력 번역/전환 · 길게 재번역";
     button.tabIndex = 0;
@@ -759,31 +759,31 @@ function watchInputTranslateButton() {
 // 메시지 번역 요청을 시작할 수 있는지 확인합니다.
 // 이미 번역 중이면 false를 돌려줘서 API 요청이 겹치지 않게 막습니다.
 function beginMessageTranslation(message, button) {
-    const tavagoData = getTavagoData(message);
+    const pavagoData = getPavagoData(message);
 
-    if (tavagoData.translation_in_progress) {
+    if (pavagoData.translation_in_progress) {
         return false;
     }
 
-    tavagoData.translation_in_progress = true;
+    pavagoData.translation_in_progress = true;
     button.prop("disabled", true);
-    button.addClass("tavago-busy");
+    button.addClass("pavago-busy");
 
     return true;
 }
 
 // 메시지 번역 요청이 끝났을 때 상태를 원래대로 돌립니다.
 function finishMessageTranslation(message, button) {
-    const tavagoData = getTavagoData(message);
+    const pavagoData = getPavagoData(message);
 
-    tavagoData.translation_in_progress = false;
+    pavagoData.translation_in_progress = false;
     button.prop("disabled", false);
-    button.removeClass("tavago-busy");
+    button.removeClass("pavago-busy");
     updateMessageButtonState(message, button);
 }
 
 // 지정한 목표 언어와 용도를 바탕으로 실제 번역 지시문을 만듭니다.
-// 기본 Tavago 프롬프트는 유지하고, 사용자가 적은 추가 지시문을 뒤에 붙입니다.
+// 기본 Pavago 프롬프트는 유지하고, 사용자가 적은 추가 지시문을 뒤에 붙입니다.
 function buildTranslationPrompt(targetLanguageCode, translationType = "message") {
     const settings = getSettings();
     const targetLanguage = getLanguageName(targetLanguageCode);
@@ -859,7 +859,7 @@ function buildTranslationPrompt(targetLanguageCode, translationType = "message")
 }
 
 // 현재 SillyTavern에 연결된 API/모델에게 번역을 요청합니다.
-// Tavago는 별도 API 키를 받지 않고 generateRaw()를 사용합니다.
+// Pavago는 별도 API 키를 받지 않고 generateRaw()를 사용합니다.
 async function translateText(text, targetLanguageCode, translationType = "message", contextText = "") {
     const context = getContext();
     const promptInfo = buildTranslationPrompt(targetLanguageCode, translationType);
@@ -917,9 +917,9 @@ async function translateInputTextarea(forceRetranslate = false) {
         return;
     }
 
-    const button = $("#tavago_translate_input");
+    const button = $("#pavago_translate_input");
     button.prop("disabled", true);
-    button.addClass("tavago-busy");
+    button.addClass("pavago-busy");
     showInfo(forceRetranslate ? "재번역을 진행 중입니다." : "번역을 진행 중입니다.");
 
     try {
@@ -945,7 +945,7 @@ async function translateInputTextarea(forceRetranslate = false) {
         showError(error.message || "번역 중 오류가 발생했습니다.");
     } finally {
         button.prop("disabled", false);
-        button.removeClass("tavago-busy");
+        button.removeClass("pavago-busy");
     }
 }
 
@@ -995,24 +995,24 @@ async function retranslateInputTextarea() {
     await translateInputTextarea(true);
 }
 
-// 메시지를 새로 번역해서 Tavago 저장 공간에 넣습니다.
+// 메시지를 새로 번역해서 Pavago 저장 공간에 넣습니다.
 // forceRetranslate가 true면 기존 번역문이 있어도 API에 다시 요청합니다.
 async function translateAndSaveMessage(message, forceRetranslate = false, messageId = null) {
-    const tavagoData = getTavagoData(message);
+    const pavagoData = getPavagoData(message);
 
-    if (tavagoData.translated_text && !forceRetranslate) {
+    if (pavagoData.translated_text && !forceRetranslate) {
         showTranslation(message);
         return false;
     }
 
     const contextText = buildPreviousMessageContext(messageId);
     const result = await translateText(message.mes, getMessageTargetLanguageCode(), "message", contextText);
-    tavagoData.translated_text = result.text.trim();
-    tavagoData.target_language = result.targetLanguage;
-    tavagoData.prompt_used = result.promptUsed;
-    tavagoData.generation_settings = result.generationSettings;
-    tavagoData.connection_profile = result.connectionProfile;
-    tavagoData.translated_at = Date.now();
+    pavagoData.translated_text = result.text.trim();
+    pavagoData.target_language = result.targetLanguage;
+    pavagoData.prompt_used = result.promptUsed;
+    pavagoData.generation_settings = result.generationSettings;
+    pavagoData.connection_profile = result.connectionProfile;
+    pavagoData.translated_at = Date.now();
     clearTranslationFailed(message);
     showTranslation(message);
 
@@ -1033,7 +1033,7 @@ async function toggleMessageTranslation(messageBlock, button) {
     }
 
     try {
-        const tavagoData = getTavagoData(message);
+        const pavagoData = getPavagoData(message);
 
         if (!hasSavedTranslation(message)) {
             if (!beginMessageTranslation(message, button)) {
@@ -1045,7 +1045,7 @@ async function toggleMessageTranslation(messageBlock, button) {
             finishMessageTranslation(message, button);
             startedTranslation = false;
             showInfo("메시지 번역이 완료되었습니다.");
-        } else if (tavagoData.showing_translation) {
+        } else if (pavagoData.showing_translation) {
             showOriginal(message);
         } else {
             showTranslation(message);
@@ -1129,13 +1129,13 @@ async function autoTranslateMessage(messageBlock) {
         return;
     }
 
-    const tavagoData = getTavagoData(message);
+    const pavagoData = getPavagoData(message);
 
-    if (tavagoData.translated_text || tavagoData.auto_translate_started || tavagoData.translation_in_progress) {
+    if (pavagoData.translated_text || pavagoData.auto_translate_started || pavagoData.translation_in_progress) {
         return;
     }
 
-    tavagoData.auto_translate_started = true;
+    pavagoData.auto_translate_started = true;
 
     setTimeout(async () => {
         const latestContext = getContext();
@@ -1143,23 +1143,23 @@ async function autoTranslateMessage(messageBlock) {
 
         if (!latestMessage || !shouldAutoTranslateMessage(latestMessage)) {
             if (latestMessage) {
-                getTavagoData(latestMessage).auto_translate_started = false;
+                getPavagoData(latestMessage).auto_translate_started = false;
             }
 
             return;
         }
 
-        const latestTavagoData = getTavagoData(latestMessage);
+        const latestPavagoData = getPavagoData(latestMessage);
         const button = $(messageBlock).find(`.${messageButtonClass}`).first();
         let startedTranslation = false;
 
-        if (latestTavagoData.translated_text || latestTavagoData.translation_in_progress) {
-            latestTavagoData.auto_translate_started = false;
+        if (latestPavagoData.translated_text || latestPavagoData.translation_in_progress) {
+            latestPavagoData.auto_translate_started = false;
             return;
         }
 
         if (!beginMessageTranslation(latestMessage, button)) {
-            latestTavagoData.auto_translate_started = false;
+            latestPavagoData.auto_translate_started = false;
             return;
         }
 
@@ -1167,12 +1167,12 @@ async function autoTranslateMessage(messageBlock) {
 
         try {
             await translateAndSaveMessage(latestMessage, false, messageId);
-            latestTavagoData.auto_translate_started = false;
+            latestPavagoData.auto_translate_started = false;
             finishMessageTranslation(latestMessage, button);
             startedTranslation = false;
             await refreshMessageAndSave(latestContext, messageId, latestMessage);
         } catch (error) {
-            latestTavagoData.auto_translate_started = false;
+            latestPavagoData.auto_translate_started = false;
             markTranslationFailed(latestMessage, error);
             if (startedTranslation) {
                 finishMessageTranslation(latestMessage, button);
@@ -1193,12 +1193,12 @@ async function autoTranslateMessage(messageBlock) {
 }
 
 // 메시지 안에 있는 기존 SillyTavern 아이콘 버튼 영역을 찾습니다.
-// Tavago 버튼은 펼쳐지는 extraMesButtons가 아니라 연필 아이콘 왼쪽 고정 영역에 넣습니다.
+// Pavago 버튼은 펼쳐지는 extraMesButtons가 아니라 연필 아이콘 왼쪽 고정 영역에 넣습니다.
 function findMessageButtonAnchor(messageBlock) {
     return messageBlock.querySelector(".mes_edit");
 }
 
-// 채팅 메시지 하나에 Tavago 아이콘 버튼을 추가합니다.
+// 채팅 메시지 하나에 Pavago 아이콘 버튼을 추가합니다.
 // 이미 버튼이 있으면 중복으로 만들지 않고 그냥 넘어갑니다.
 function addTranslateButtonToMessage(messageBlock) {
     if (!(messageBlock instanceof HTMLElement)) {
@@ -1223,7 +1223,7 @@ function addTranslateButtonToMessage(messageBlock) {
 
     const button = $(`
         <div class="${messageButtonClass} mes_button" title="번역">
-            <span class="tavago-message-icon"></span>
+            <span class="pavago-message-icon"></span>
         </div>
     `);
     let longPressTimer = null;
@@ -1275,7 +1275,7 @@ function addTranslateButtonToMessage(messageBlock) {
     editButton.parentElement.insertBefore(button[0], editButton);
 }
 
-// 화면에 보이는 모든 채팅 메시지에 Tavago 버튼을 붙입니다.
+// 화면에 보이는 모든 채팅 메시지에 Pavago 버튼을 붙입니다.
 // allowAutoTranslate가 true일 때만 새 메시지 자동 번역도 같이 확인합니다.
 function addTranslateButtonsToMessages(allowAutoTranslate = false) {
     const shouldCheckAutoTranslate = allowAutoTranslate && initialChatScanDone;
@@ -1302,7 +1302,7 @@ function addTranslateButtonsToMessages(allowAutoTranslate = false) {
 }
 
 // 채팅 영역을 감시합니다.
-// 새 메시지가 생기면 그 메시지에도 Tavago 버튼을 붙입니다.
+// 새 메시지가 생기면 그 메시지에도 Pavago 버튼을 붙입니다.
 function watchChatMessages() {
     const chat = document.querySelector("#chat");
 
@@ -1318,7 +1318,7 @@ function watchChatMessages() {
 // 저장된 설정값을 설정창 화면에 채워 넣습니다.
 function renderConnectionProfileOptions() {
     const settings = getSettings();
-    const select = $("#tavago_connection_profile");
+    const select = $("#pavago_connection_profile");
     const selectedProfile = normalizeConnectionProfileName(settings.connectionProfile);
     const profileNames = getConnectionProfileNames();
 
@@ -1340,84 +1340,84 @@ function renderConnectionProfileOptions() {
 function loadSettingsToUi() {
     const settings = getSettings();
     renderConnectionProfileOptions();
-    $("#tavago_target_language").val(settings.targetLanguage);
-    $("#tavago_bidirectional_mode").val(settings.bidirectionalMode);
-    $("#tavago_auto_translate_mode").val(settings.autoTranslateMode);
-    $("#tavago_dual_line_mode").val(settings.dualLineMode ? "on" : "off");
-    $("#tavago_input_edit_mode").val(settings.inputEditMode);
-    $("#tavago_translation_style").val(normalizeTranslationStyle(settings.translationStyle));
-    $("#tavago_temperature").val(getGenerationOptions().temperature);
-    $("#tavago_max_tokens").val(getGenerationOptions().maxTokens);
-    $("#tavago_context_message_count").val(getGenerationOptions().contextMessageCount);
-    $("#tavago_custom_prompt").val(settings.customPrompt);
+    $("#pavago_target_language").val(settings.targetLanguage);
+    $("#pavago_bidirectional_mode").val(settings.bidirectionalMode);
+    $("#pavago_auto_translate_mode").val(settings.autoTranslateMode);
+    $("#pavago_dual_line_mode").val(settings.dualLineMode ? "on" : "off");
+    $("#pavago_input_edit_mode").val(settings.inputEditMode);
+    $("#pavago_translation_style").val(normalizeTranslationStyle(settings.translationStyle));
+    $("#pavago_temperature").val(getGenerationOptions().temperature);
+    $("#pavago_max_tokens").val(getGenerationOptions().maxTokens);
+    $("#pavago_context_message_count").val(getGenerationOptions().contextMessageCount);
+    $("#pavago_custom_prompt").val(settings.customPrompt);
 }
 
-// 설정창의 입력 요소들을 Tavago 동작과 연결합니다.
+// 설정창의 입력 요소들을 Pavago 동작과 연결합니다.
 // 설정을 바꾸면 SillyTavern 설정 저장 기능으로 자동 저장됩니다.
 function bindSettingsEvents() {
-    $("#tavago_connection_profile").on("focus click", renderConnectionProfileOptions);
+    $("#pavago_connection_profile").on("focus click", renderConnectionProfileOptions);
 
-    $("#tavago_connection_profile").on("change", function () {
+    $("#pavago_connection_profile").on("change", function () {
         getSettings().connectionProfile = normalizeConnectionProfileName($(this).val());
         saveSettingsDebounced();
     });
 
-    $("#tavago_target_language").on("change", function () {
+    $("#pavago_target_language").on("change", function () {
         getSettings().targetLanguage = String($(this).val() || "ko");
         saveSettingsDebounced();
     });
 
-    $("#tavago_bidirectional_mode").on("change", function () {
+    $("#pavago_bidirectional_mode").on("change", function () {
         getSettings().bidirectionalMode = String($(this).val() || "off");
         saveSettingsDebounced();
     });
 
-    $("#tavago_auto_translate_mode").on("change", function () {
+    $("#pavago_auto_translate_mode").on("change", function () {
         getSettings().autoTranslateMode = String($(this).val() || "off");
         saveSettingsDebounced();
     });
 
-    $("#tavago_dual_line_mode").on("change", function () {
+    $("#pavago_dual_line_mode").on("change", function () {
         getSettings().dualLineMode = String($(this).val() || "off") === "on";
         saveSettingsDebounced();
     });
 
-    $("#tavago_input_edit_mode").on("change", function () {
+    $("#pavago_input_edit_mode").on("change", function () {
         getSettings().inputEditMode = String($(this).val() || "manual");
         saveSettingsDebounced();
     });
 
-    $("#tavago_translation_style").on("change", function () {
+    $("#pavago_translation_style").on("change", function () {
         getSettings().translationStyle = normalizeTranslationStyle($(this).val());
         saveSettingsDebounced();
     });
 
-    $("#tavago_temperature").on("input", function () {
+    $("#pavago_temperature").on("input", function () {
         getSettings().temperature = normalizeNumberSetting($(this).val(), defaultSettings.temperature, 0, 2, true);
         saveSettingsDebounced();
     });
 
-    $("#tavago_max_tokens").on("input", function () {
+    $("#pavago_max_tokens").on("input", function () {
         getSettings().maxTokens = normalizeNumberSetting($(this).val(), defaultSettings.maxTokens, 100, 8000);
         saveSettingsDebounced();
     });
 
-    $("#tavago_context_message_count").on("input", function () {
+    $("#pavago_context_message_count").on("input", function () {
         getSettings().contextMessageCount = normalizeNumberSetting($(this).val(), defaultSettings.contextMessageCount, 0, 20);
         saveSettingsDebounced();
     });
 
-    $("#tavago_custom_prompt").on("input", function () {
+    $("#pavago_custom_prompt").on("input", function () {
         getSettings().customPrompt = String($(this).val() || "");
         saveSettingsDebounced();
     });
 
-    $("#tavago_clear_chat_translations").on("click", async function () {
+    $("#pavago_clear_chat_translations").on("click", async function () {
         await clearCurrentChatTranslations();
     });
 }
 
-// Tavago 시작 지점입니다.
+// Pavago 시작 지점입니다.
 // SillyTavern 페이지 준비가 끝난 뒤 실행됩니다.
 jQuery(async () => {
     getSettings();

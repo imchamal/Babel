@@ -1,11 +1,11 @@
 {
-    "display_name": "Tavago",
+    "display_name": "Pavago",
     "loading_order": 100,
     "requires": [],
     "optional": [],
     "js": "index.js",
     "css": "style.css",
-    "author": "Tavago",
-    "version": "0.3.2",
+    "author": "Pavago",
+    "version": "1.0.0",
     "homePage": ""
 }
