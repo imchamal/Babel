@@ -13,7 +13,7 @@ const messageButtonClass = "babel_translate_message";
 const activeButtonClass = "babel-active";
 const outdatedButtonClass = "babel-outdated";
 const errorButtonClass = "babel-error";
-const inputIconClass = "fa-solid fa-fish";
+const inputIconClass = "fa-solid fa-sailboat";
 const longPressMs = 650;
 const autoTranslateDelayMs = 1500;
 const inputEditRetranslateDelayMs = 800;
@@ -1292,7 +1292,7 @@ function addTranslateButtonToMessage(messageBlock) {
 
     const button = $(`
         <div class="${messageButtonClass} mes_button" title="번역">
-            <i class="fa-solid fa-language"></i>
+            <i class="fa-solid fa-fish"></i>
         </div>
     `);
     let longPressTimer = null;
