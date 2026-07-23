@@ -837,10 +837,12 @@ async function autoTranslateMessage(messageBlock) {
         let startedTranslation = false;
 
         if (latestTavagoData.translated_text || latestTavagoData.translation_in_progress) {
+            latestTavagoData.auto_translate_started = false;
             return;
         }
 
         if (!beginMessageTranslation(latestMessage, button)) {
+            latestTavagoData.auto_translate_started = false;
             return;
         }
 
@@ -848,6 +850,7 @@ async function autoTranslateMessage(messageBlock) {
 
         try {
             await translateAndSaveMessage(latestMessage);
+            latestTavagoData.auto_translate_started = false;
             finishMessageTranslation(latestMessage, button);
             startedTranslation = false;
             await refreshMessageAndSave(latestContext, messageId, latestMessage);
@@ -960,11 +963,14 @@ function addTranslateButtonToMessage(messageBlock) {
 function addTranslateButtonsToMessages(allowAutoTranslate = false) {
     document.querySelectorAll("#chat .mes").forEach((messageBlock) => {
         const messageId = getMessageIdFromBlock(messageBlock);
-        const isNewMessage = messageId !== null && !seenMessageIds.has(messageId);
+        const context = getContext();
+        const message = messageId === null ? null : context.chat?.[messageId];
+        const hasMessageText = Boolean(message?.mes);
+        const isNewMessage = messageId !== null && hasMessageText && !seenMessageIds.has(messageId);
 
         addTranslateButtonToMessage(messageBlock);
 
-        if (messageId !== null) {
+        if (messageId !== null && hasMessageText) {
             seenMessageIds.add(messageId);
         }
 
