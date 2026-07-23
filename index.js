@@ -1,4 +1,5 @@
 import { extension_settings, getContext } from "../../../extensions.js";
+import { executeSlashCommands } from "../../../slash-commands.js";
 import { saveSettingsDebounced } from "../../../../script.js";
 
 // Tavago 확장프로그램의 이름과 폴더 경로입니다.
@@ -16,6 +17,7 @@ const inputIconClass = "fa-solid fa-feather-pointed";
 const longPressMs = 650;
 const autoTranslateDelayMs = 1500;
 const seenMessageIds = new Set();
+let translationQueue = Promise.resolve();
 let inputTranslationState = null;
 
 // 처음 실행할 때 사용할 기본 설정입니다.
@@ -25,6 +27,7 @@ const defaultSettings = {
     bidirectionalMode: "ko-en",
     autoTranslateMode: "ai",
     dualLineMode: false,
+    connectionProfile: "",
     customPrompt: "",
     systemPrompt: [
         "You are Tavago, a precise translation engine for SillyTavern chats.",
@@ -101,6 +104,94 @@ function getInputTargetLanguageCode() {
 // 메시지 번역에 사용할 목표 언어를 계산합니다.
 function getMessageTargetLanguageCode() {
     return getSettings().targetLanguage;
+}
+
+// SillyTavern의 API 연결 프로필 목록을 가져옵니다.
+// 연결 프로필 내장 확장이 꺼져 있거나 아직 준비되지 않았으면 빈 목록을 반환합니다.
+function getConnectionProfileNames() {
+    const profiles = extension_settings.connectionManager?.profiles;
+
+    if (!Array.isArray(profiles)) {
+        return [];
+    }
+
+    return profiles
+        .map((profile) => {
+            if (typeof profile === "string") {
+                return profile;
+            }
+
+            return profile?.name;
+        })
+        .filter((name) => typeof name === "string" && name.trim())
+        .map((name) => name.trim())
+        .filter((name, index, names) => names.indexOf(name) === index);
+}
+
+// 연결 프로필 이름을 slash command에 안전하게 넘기기 위해 큰따옴표 문자열로 만듭니다.
+function quoteSlashArgument(value) {
+    return `"${String(value).replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`;
+}
+
+// 연결 프로필 명령 실행 결과에서 pipe 값을 꺼냅니다.
+function getSlashCommandPipe(result) {
+    return result?.pipe === undefined || result?.pipe === null ? "" : String(result.pipe);
+}
+
+// SillyTavern은 프로필 없음 상태를 <None>으로 표현할 수 있으므로 Tavago 내부에서는 빈 문자열로 통일합니다.
+function normalizeConnectionProfileName(profileName) {
+    const normalized = String(profileName || "").trim();
+
+    return normalized === "<None>" ? "" : normalized;
+}
+
+// 현재 선택된 연결 프로필 이름을 가져옵니다.
+async function getCurrentConnectionProfileName() {
+    const result = await executeSlashCommands("/profile", false, null, true);
+
+    return normalizeConnectionProfileName(getSlashCommandPipe(result));
+}
+
+// 지정한 연결 프로필로 전환합니다. 빈 문자열이면 프로필 없음 상태로 전환합니다.
+async function switchConnectionProfile(profileName) {
+    const profileArgument = profileName ? quoteSlashArgument(profileName) : "<None>";
+    const result = await executeSlashCommands(`/profile ${profileArgument}`, false, null, true);
+
+    if (result?.isError) {
+        throw new Error(result.errorMessage || "연결 프로필 전환에 실패했습니다.");
+    }
+}
+
+// Tavago에서 선택한 연결 프로필을 적용한 상태로 작업을 실행합니다.
+// /profile은 SillyTavern 전체 연결 설정을 바꾸므로, 작업 후 이전 프로필로 되돌립니다.
+async function runWithSelectedConnectionProfile(task) {
+    const selectedProfile = normalizeConnectionProfileName(getSettings().connectionProfile);
+
+    if (!selectedProfile) {
+        return task();
+    }
+
+    const currentProfile = await getCurrentConnectionProfileName();
+
+    if (currentProfile !== selectedProfile) {
+        await switchConnectionProfile(selectedProfile);
+    }
+
+    try {
+        return await task();
+    } finally {
+        if (currentProfile !== selectedProfile) {
+            await switchConnectionProfile(currentProfile);
+        }
+    }
+}
+
+// 프로필 전환은 전역 연결 상태를 바꾸므로 번역 요청을 한 번에 하나씩 처리합니다.
+function enqueueTranslationTask(task) {
+    const queuedTask = translationQueue.then(task, task);
+    translationQueue = queuedTask.catch(() => {});
+
+    return queuedTask;
 }
 
 // 일반 안내 메시지를 보여주는 함수입니다.
@@ -236,7 +327,8 @@ function isTranslationOutdated(message) {
 
     return (
         tavagoData.target_language !== promptInfo.targetLanguage ||
-        tavagoData.prompt_used !== promptInfo.systemPrompt
+        tavagoData.prompt_used !== promptInfo.systemPrompt ||
+        normalizeConnectionProfileName(tavagoData.connection_profile) !== normalizeConnectionProfileName(getSettings().connectionProfile)
     );
 }
 
@@ -465,15 +557,18 @@ async function translateText(text, targetLanguageCode, translationType = "messag
         throw new Error("현재 SillyTavern에서 generateRaw()를 찾을 수 없습니다.");
     }
 
-    const translatedText = await context.generateRaw({
-        systemPrompt: promptInfo.systemPrompt,
-        prompt: text,
-    });
+    const translatedText = await enqueueTranslationTask(() => runWithSelectedConnectionProfile(() => (
+        context.generateRaw({
+            systemPrompt: promptInfo.systemPrompt,
+            prompt: text,
+        })
+    )));
 
     return {
         text: translatedText,
         targetLanguage: promptInfo.targetLanguage,
         promptUsed: promptInfo.systemPrompt,
+        connectionProfile: normalizeConnectionProfileName(getSettings().connectionProfile),
     };
 }
 
@@ -526,6 +621,7 @@ async function translateInputTextarea(forceRetranslate = false) {
             showingTranslation: true,
             targetLanguage: result.targetLanguage,
             promptUsed: result.promptUsed,
+            connectionProfile: result.connectionProfile,
             translatedAt: Date.now(),
         };
 
@@ -598,6 +694,7 @@ async function translateAndSaveMessage(message, forceRetranslate = false) {
     tavagoData.translated_text = result.text.trim();
     tavagoData.target_language = result.targetLanguage;
     tavagoData.prompt_used = result.promptUsed;
+    tavagoData.connection_profile = result.connectionProfile;
     tavagoData.translated_at = Date.now();
     clearTranslationFailed(message);
     showTranslation(message);
@@ -892,8 +989,30 @@ function watchChatMessages() {
 }
 
 // 저장된 설정값을 설정창 화면에 채워 넣습니다.
+function renderConnectionProfileOptions() {
+    const settings = getSettings();
+    const select = $("#tavago_connection_profile");
+    const selectedProfile = normalizeConnectionProfileName(settings.connectionProfile);
+    const profileNames = getConnectionProfileNames();
+
+    select.empty();
+    select.append($("<option></option>").val("").text("기본값 사용"));
+
+    profileNames.forEach((profileName) => {
+        select.append($("<option></option>").val(profileName).text(profileName));
+    });
+
+    if (selectedProfile && !profileNames.includes(selectedProfile)) {
+        select.append($("<option></option>").val(selectedProfile).text(`${selectedProfile} (찾을 수 없음)`));
+    }
+
+    select.val(selectedProfile);
+}
+
+// 저장된 설정값을 설정창 화면에 채워 넣습니다.
 function loadSettingsToUi() {
     const settings = getSettings();
+    renderConnectionProfileOptions();
     $("#tavago_target_language").val(settings.targetLanguage);
     $("#tavago_bidirectional_mode").val(settings.bidirectionalMode);
     $("#tavago_auto_translate_mode").val(settings.autoTranslateMode);
@@ -904,6 +1023,13 @@ function loadSettingsToUi() {
 // 설정창의 입력 요소들을 Tavago 동작과 연결합니다.
 // 설정을 바꾸면 SillyTavern 설정 저장 기능으로 자동 저장됩니다.
 function bindSettingsEvents() {
+    $("#tavago_connection_profile").on("focus click", renderConnectionProfileOptions);
+
+    $("#tavago_connection_profile").on("change", function () {
+        getSettings().connectionProfile = normalizeConnectionProfileName($(this).val());
+        saveSettingsDebounced();
+    });
+
     $("#tavago_target_language").on("change", function () {
         getSettings().targetLanguage = String($(this).val() || "ko");
         saveSettingsDebounced();

@@ -1,8 +1,6 @@
 /* Tavago 설정창 전체 배치입니다. */
 #tavago_settings {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+    margin-bottom: 8px;
 }
 
 /* 설정창 제목 줄입니다. */
@@ -10,22 +8,38 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    font-weight: 700;
 }
 
-.tavago-title i {
-    color: var(--SmartThemeQuoteColor);
+.tavago-title-icon {
+    display: inline-block;
+    width: 1.1em;
+    height: 1.1em;
+    background-color: currentColor;
+    mask: url("icons/tavago-parrot.png") center / contain no-repeat;
+    -webkit-mask: url("icons/tavago-parrot.png") center / contain no-repeat;
+    pointer-events: none;
 }
 
-.tavago-section {
+.tavago-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.tavago-field {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
+    min-width: 0;
 }
 
-.tavago-section-title {
-    font-weight: 700;
-    opacity: 0.9;
+.tavago-field-full {
+    margin-top: 8px;
+}
+
+.tavago-field-first {
+    margin-top: 0;
+    margin-bottom: 8px;
 }
 
 /* 설정 라벨과 버튼 영역의 기본 간격입니다. */
@@ -34,7 +48,15 @@
 }
 
 .tavago-help {
+    display: block;
+    margin-top: 8px;
     opacity: 0.8;
+}
+
+@media screen and (max-width: 480px) {
+    .tavago-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 #tavago_translate_input {
@@ -59,7 +81,7 @@
 .tavago-message-icon {
     display: inline-block;
     position: relative;
-    top: -0.08em;
+    top: -0.12em;
     width: 1.4em;
     height: 1.4em;
     background-color: currentColor;
